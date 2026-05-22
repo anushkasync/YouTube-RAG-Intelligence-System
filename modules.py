@@ -4,7 +4,7 @@ from prompts.keypoints_prompt import KEYPOINTS_PROMPT
 
 
 def summarize_small(chunks, llm):
-    text = "\n".join(chunks[:5])
+    text = "\n".join(chunks[:3])
     mode = "raw"
 
     prompt = SUMMARY_PROMPT.format(content=text, mode=mode)
@@ -40,7 +40,7 @@ def summarize_long(processed_chunks, llm):
 
 def generate_summary(processed_chunks, llm, mode):
     if mode in ("raw", "small"):
-        return summarize_small(processed_chunks.get("raw", [])[:5], llm)
+        return summarize_small(processed_chunks.get("raw", [])[:3], llm)
     elif mode == "medium":
         return summarize_medium(processed_chunks, llm)
     elif mode == "long":
