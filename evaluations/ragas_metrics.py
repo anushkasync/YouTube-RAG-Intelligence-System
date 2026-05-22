@@ -40,7 +40,7 @@ def ragas_metrics(query, context, response, ground_truth=None):
         dataset = Dataset.from_dict({
             "question": [query],
             "answer": [response],
-            "contexts": [[context]],
+            "contexts": [context],
             "ground_truth": [ground_truth] if ground_truth else [""]
         })
 

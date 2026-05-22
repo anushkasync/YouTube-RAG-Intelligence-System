@@ -7,41 +7,58 @@ from benchmarks.run_benchmark import run_benchmark
 def run_full_suite(cache, llm, config, mode="full"):
     """
     mode:
-        - benchmark → NO LLM (only retrieval + system scoring)
+        - benchmark → NO LLM
         - eval → LLM + RAGAS evaluation only
         - full → both benchmark + evaluation
     """
 
     test_cases = load_test_cases()
-    pipeline_results = []
 
+    pipeline_results = []
     eval_results = []
 
     for test in test_cases:
 
-        run_result = run_rag(test, config, cache, llm)
+        run_result = run_rag(
+            test,
+            config,
+            cache,
+            llm
+        )
 
         output = run_result.get("output", "")
-        processed_chunks = run_result.get("processed_chunks", []) or []
+        processed_chunks = (
+            run_result.get("processed_chunks", {}) or {}
+        )
+
         latency = run_result.get("latency", 0.0)
+
+        mode_used = (
+            run_result
+            .get("metadata", {})
+            .get("mode")
+        )
 
         base = {
             "test_id": test.get("id"),
             "task": test.get("task"),
             "output": output,
             "processed_chunks": processed_chunks,
-            "latency": latency
+            "latency": latency,
+            "mode": mode_used
         }
 
         pipeline_results.append(base)
 
     if mode in ["eval", "full"]:
+
         for item in pipeline_results:
 
             eval_result = run_evaluation(
                 query=item["task"],
                 output=item["output"],
                 processed_chunks=item["processed_chunks"],
+                mode=item["mode"],
                 latency=item["latency"],
                 config=config
             )
@@ -55,7 +72,9 @@ def run_full_suite(cache, llm, config, mode="full"):
     benchmark_results = None
 
     if mode in ["benchmark", "full"]:
-        benchmark_results = run_benchmark(pipeline_results)
+        benchmark_results = run_benchmark(
+            pipeline_results
+        )
 
     return {
         "mode": mode,

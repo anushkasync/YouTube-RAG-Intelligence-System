@@ -58,7 +58,7 @@ def llm_judge_ux(output, context, task, api_key=None):
 - usefulness
 
 Context:
-{context}
+{"\n\n".join(context[:2])}
 
 Response:
 {output}
