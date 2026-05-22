@@ -42,8 +42,8 @@ class Chunker:
         chunks,
         mode,
         vectorstore=None,
-        k=5,
-        n_clusters=5
+        k=3,
+        n_clusters=3
     ):
 
         processed = {
@@ -52,16 +52,12 @@ class Chunker:
             "long": None
         }
 
-        # -----------------------
+
         # SMALL MODE (≤ 5 chunks)
-        # -----------------------
         if mode in ("raw", "small"):
             return processed
 
-        # -----------------------
-        # MEDIUM MODE (5–19 chunks)
-        # Top-K Retrieval
-        # -----------------------
+        # MEDIUM MODE (5–19 chunks) : Top-K Retrieval
         if mode == "medium":
 
             if vectorstore is None:
@@ -72,10 +68,7 @@ class Chunker:
 
             processed["medium"] = [doc.page_content for doc in docs]
 
-        # -----------------------
-        # LONG MODE (≥ 20 chunks)
-        # KMeans clustering
-        # -----------------------
+        # LONG MODE (≥ 20 chunks): KMeans clustering
         elif mode == "long":
 
             if self.embedding_model is None:
@@ -97,25 +90,22 @@ class Chunker:
             representative_chunks = []
 
             for i in range(n_clusters):
-                # chunk indices belonging to cluster i
+
                 idx = np.where(labels == i)[0]
 
                 if len(idx) > 0:
-                    # embeddings of chunks inside this cluster
+
                     cluster_embeddings = np.array(embeddings)[idx]
 
-                    # centroid of current cluster
                     centroid = kmeans.cluster_centers_[i]
 
-                    # similarity of centroid with all chunks in cluster
                     similarities = cosine_similarity([centroid], cluster_embeddings)[0]
 
-                    # best representative chunk index
                     best_idx = idx[np.argmax(similarities)]
 
                     representative_chunks.append(chunks[best_idx])
 
-            processed["long"] = representative_chunks[:6]
+            processed["long"] = representative_chunks[:3]
 
         else:
             raise ValueError(f"Unsupported chunk processing mode: {mode}")
