@@ -7,7 +7,7 @@ from logger import get_logger
 logger = get_logger("LLM")
 
 
-class OpenRouterLLM:
+class GROQLLM:
 
     def __init__(
         self,
@@ -92,8 +92,7 @@ class OpenRouterLLM:
 
                 response = requests.post(
                     url=(
-                        "https://openrouter.ai/"
-                        "api/v1/chat/completions"
+                        "https://api.groq.com/openai/v1/chat/completions"
                     ),
 
                     headers={

@@ -2,13 +2,13 @@ import os
 
 CHUNK_SIZE = 500
 OVERLAP = 100
-TOP_K = 5
+TOP_K = 3
 SMALL_LIMIT = 5
 MEDIUM_LIMIT = 20
-N_CLUSTERS = 5
+N_CLUSTERS = 3
 
-LLM_MODEL = "minimax/minimax-m2.5:free"
-JUDGE_MODEL = "minimax/minimax-m2.5:free"
+LLM_MODEL = "llama-3.3-70b-versatile"
+JUDGE_MODEL = "qwen/qwen3-32b"
 EMBEDDING_MODEL_NAME = "thenlper/gte-small"
 
 # Whisper Fallback Settings

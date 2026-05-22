@@ -10,7 +10,7 @@ from logger import get_logger
 from config.config import CONFIG
 
 from utils.cache_manager import CacheManager
-from utils.llm import OpenRouterLLM
+from utils.llm import GROQLLM
 
 from run_pipeline import run_pipeline
 from evaluations.full_suite import run_full_suite
@@ -44,13 +44,13 @@ async def lifespan(app: FastAPI):
 
     logger.info("Cache manager initialized")
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
 
     if not api_key:
-        logger.error("OPENROUTER_API_KEY missing")
-        raise ValueError("OPENROUTER_API_KEY missing")
+        logger.error("GROQ_API_KEY missing")
+        raise ValueError("GROQ_API_KEY missing")
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key=api_key,
         model=CONFIG["LLM_MODEL"],
         cache_manager=cache
