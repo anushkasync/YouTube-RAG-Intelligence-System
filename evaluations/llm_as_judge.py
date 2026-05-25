@@ -7,7 +7,7 @@ import json
 import os
 import re
 
-from utils.llm import OpenRouterLLM
+from utils.llm import GROQLLM
 from config.config import JUDGE_MODEL
 from dotenv import load_dotenv
 
@@ -39,7 +39,7 @@ def llm_judge_ux(output, context, task, api_key=None):
     Returns scores 0.0-1.0 normalized from 1-5 scale
     """
     if api_key is None:
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return {
     "clarity": 0.5,
@@ -49,7 +49,7 @@ def llm_judge_ux(output, context, task, api_key=None):
     "warning": "Judge API key missing"
 }
 
-    llm = OpenRouterLLM(api_key=api_key, model=JUDGE_MODEL)
+    llm = GROQLLM(api_key=api_key, model=JUDGE_MODEL)
 
 
     prompt = f""" Rate this response from 1-5 for:

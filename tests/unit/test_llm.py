@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from utils.llm import OpenRouterLLM
+from utils.llm import GROQLLM
 
 class MockHTTPResponse:
 
@@ -60,7 +60,7 @@ def test_llm_success(monkeypatch):
         fake_post
     )
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key="fake_key",
         model="test-model"
     )
@@ -86,7 +86,7 @@ def test_llm_api_failure(monkeypatch):
         fake_post
     )
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key="fake_key",
         model="test-model"
     )
@@ -119,7 +119,7 @@ def test_llm_cache_hit(monkeypatch):
         fake_post
     )
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key="fake_key",
         model="test-model",
         cache_manager=cache
@@ -154,7 +154,7 @@ def test_llm_cache_miss_and_save(monkeypatch):
         fake_post
     )
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key="fake_key",
         model="test-model",
         cache_manager=cache
@@ -202,7 +202,7 @@ def test_llm_throttle_called(monkeypatch):
         fake_post
     )
 
-    llm = OpenRouterLLM(
+    llm = GROQLLM(
         api_key="fake_key",
         model="test-model"
     )

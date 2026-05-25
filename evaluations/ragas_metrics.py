@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from ragas import evaluate
 from ragas.metrics.collections import faithfulness, answer_relevancy
 from ragas.llms import LangchainLLMWrapper
-from utils.llm import OpenRouterLLM
+from utils.llm import GROQLLM
 from utils.cache_manager import CacheManager
 from ragas.embeddings import HuggingFaceEmbeddings
 from datasets import Dataset
@@ -28,7 +28,7 @@ def ragas_metrics(query, context, response, ground_truth=None):
     Evaluate using RAGAS metrics
     """
 
-    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    openrouter_key = os.getenv("GROQ_API_KEY")
 
     try:
         if context is None:
@@ -46,7 +46,7 @@ def ragas_metrics(query, context, response, ground_truth=None):
 
         ragas_llm = LangchainLLMWrapper(
     RagasLLMAdapter(
-        OpenRouterLLM(
+        GROQLLM(
             api_key=openrouter_key,
             model=JUDGE_MODEL,
             cache_manager=cache_manager

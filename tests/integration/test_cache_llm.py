@@ -1,5 +1,5 @@
 from utils.cache_manager import CacheManager
-from utils.llm import OpenRouterLLM
+from utils.llm import GROQLLM
 
 class MockResponse:
 
@@ -71,7 +71,7 @@ def test_llm_cache_integration(tmp_path, monkeypatch):
 
     monkeypatch.setattr("requests.post", fake_post)
 
-    service = OpenRouterLLM(
+    service = GROQLLM(
         api_key="fake",
         model="test-model",
         cache_manager=cache
