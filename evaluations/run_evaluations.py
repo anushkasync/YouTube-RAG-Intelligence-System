@@ -46,11 +46,6 @@ def run_evaluation(
         mode
     )
 
-    retrieval = retrieval_metrics(
-        query,
-        context
-    )
-
     ragas = ragas_metrics(
         query,
         context,
@@ -63,24 +58,71 @@ def run_evaluation(
         query
     )
 
-    ragas_score = (
-        ragas.get("faithfulness", 0.5) +
-        ragas.get("answer_relevancy", 0.5)
-    ) / 2
+    if ragas.get("fallback_used"):
 
-    ux_score = ux.get(
-        "overall_score",
-        0.5
-    )
+        ragas_score = None
 
-    generation_quality = (
-        0.6 * ragas_score +
-        0.4 * ux_score
-    )
+    else:
+
+        ragas_score = round(
+            (
+                ragas["faithfulness"] +
+                ragas["answer_relevancy"]
+            ) / 2,
+            3
+        )
+
+    if ux.get("fallback_used"):
+
+        ux_score = None
+
+    else:
+
+        ux_score = ux["overall_score"]
+
+
+    if ragas_score is not None and ux_score is not None:
+
+        generation_quality = round(
+            (
+                0.6 * ragas_score +
+                0.4 * ux_score
+            ),
+            3
+        )
+
+    elif ragas_score is not None:
+
+        generation_quality = ragas_score
+
+    elif ux_score is not None:
+
+        generation_quality = ux_score
+
+    else:
+
+        generation_quality = None
 
     return {
-        "ragas_score": ragas_score,
-        "ux_score": ux_score,
+
+        "ragas": {
+            "faithfulness": ragas.get("faithfulness"),
+            "answer_relevancy": ragas.get("answer_relevancy"),
+            "overall_score": ragas_score,
+            "fallback_used": ragas.get("fallback_used", False),
+            "error": ragas.get("error")
+        },
+
+        "ux": {
+            "clarity": ux.get("clarity"),
+            "completeness": ux.get("completeness"),
+            "usefulness": ux.get("usefulness"),
+            "overall_score": ux_score,
+            "fallback_used": ux.get("fallback_used", False),
+            "error": ux.get("error")
+        },
+
         "generation_quality": generation_quality,
+
         "latency": latency
     }

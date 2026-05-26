@@ -1,64 +1,103 @@
 """
 UX Quality Evaluation using LLM Judge
-Measures: clarity, completeness, usefulness
-Separated from faithfulness metrics which use RAGAS
+Measures:
+- clarity
+- completeness
+- usefulness
+
+Separated from RAGAS faithfulness evaluation
 """
+
 import json
 import os
 import re
 
+from dotenv import load_dotenv
+
 from utils.llm import GROQLLM
 from config.config import JUDGE_MODEL
-from dotenv import load_dotenv
 
 load_dotenv()
 
 
 def _parse_json_safe(text):
+
     if not text:
         return {}
-    match = re.search(r"\{.*\}", text, flags=re.S)
+
+    match = re.search(
+        r"\{.*\}",
+        text,
+        flags=re.S
+    )
+
     if match:
         text = match.group(0)
+
     try:
         return json.loads(text)
+
     except Exception:
+
         try:
-            return json.loads(text.replace("'", '"'))
+            return json.loads(
+                text.replace("'", '"')
+            )
+
         except Exception:
             return {}
 
 
-def llm_judge_ux(output, context, task, api_key=None):
+def llm_judge_ux(
+    output,
+    context,
+    task,
+    api_key=None
+):
     """
-    Evaluate user experience quality metrics:
-    - clarity: how clear and well-written is the response?
-    - completeness: does it fully address the query?
-    - usefulness: would this help the user?
-    
-    Returns scores 0.0-1.0 normalized from 1-5 scale
+    Evaluate UX quality metrics:
+    - clarity
+    - completeness
+    - usefulness
+
+    Returns normalized scores
+    between 0.0 and 1.0
     """
-    if api_key is None:
-        api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return {
-    "clarity": 0.5,
-    "completeness": 0.5,
-    "usefulness": 0.5,
-    "overall_score": 0.5,
-    "warning": "Judge API key missing"
-}
 
-    llm = GROQLLM(api_key=api_key, model=JUDGE_MODEL)
+    try:
 
+        if api_key is None:
+            api_key = os.getenv(
+                "GROQ_API_KEY"
+            )
 
-    prompt = f""" Rate this response from 1-5 for:
+        if not api_key:
+
+            return {
+                "clarity": None,
+                "completeness": None,
+                "usefulness": None,
+                "overall_score": 0.5,
+                "fallback_used": True,
+                "error": "Judge API key missing"
+            }
+
+        llm = GROQLLM(
+            api_key=api_key,
+            model=JUDGE_MODEL
+        )
+
+        prompt = f"""
+Rate this response from 1-5 for:
 - clarity
 - completeness
 - usefulness
 
 Context:
 {"\n\n".join(context[:2])}
+
+Task:
+{task}
 
 Response:
 {output}
@@ -70,17 +109,100 @@ Return ONLY JSON:
   "usefulness": 0
 }}
 """
-    
-    response = llm.invoke(prompt).content
-    parsed = _parse_json_safe(response)
-    
-    clarity = float(parsed.get("clarity", 3.0)) / 5.0
-    completeness = float(parsed.get("completeness", 3.0)) / 5.0
-    usefulness = float(parsed.get("usefulness", 3.0)) / 5.0
-    
-    return {
-        "clarity": round(min(max(clarity, 0.0), 1.0), 3),
-        "completeness": round(min(max(completeness, 0.0), 1.0), 3),
-        "usefulness": round(min(max(usefulness, 0.0), 1.0), 3),
-        "overall_score": round((clarity + completeness + usefulness) / 3.0, 3)
-    }
+
+        response = llm.invoke(
+            prompt
+        ).content
+
+        parsed = _parse_json_safe(
+            response
+        )
+
+        clarity = (
+            float(
+                parsed.get(
+                    "clarity",
+                    3.0
+                )
+            ) / 5.0
+        )
+
+        completeness = (
+            float(
+                parsed.get(
+                    "completeness",
+                    3.0
+                )
+            ) / 5.0
+        )
+
+        usefulness = (
+            float(
+                parsed.get(
+                    "usefulness",
+                    3.0
+                )
+            ) / 5.0
+        )
+
+        clarity_score = round(
+            min(
+                max(
+                    clarity,
+                    0.0
+                ),
+                1.0
+            ),
+            3
+        )
+
+        completeness_score = round(
+            min(
+                max(
+                    completeness,
+                    0.0
+                ),
+                1.0
+            ),
+            3
+        )
+
+        usefulness_score = round(
+            min(
+                max(
+                    usefulness,
+                    0.0
+                ),
+                1.0
+            ),
+            3
+        )
+
+        overall_score = round(
+            (
+                clarity_score +
+                completeness_score +
+                usefulness_score
+            ) / 3.0,
+            3
+        )
+
+        return {
+            "clarity": clarity_score,
+            "completeness": completeness_score,
+            "usefulness": usefulness_score,
+            "overall_score": overall_score,
+            "fallback_used": False,
+            "error": None
+        }
+
+    except Exception as e:
+
+        return {
+            "clarity": None,
+            "completeness": None,
+            "usefulness": None,
+            "overall_score": 0.5,
+            "fallback_used": True,
+            "error": str(e)
+        }

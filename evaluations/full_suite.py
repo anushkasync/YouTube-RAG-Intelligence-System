@@ -4,17 +4,28 @@ from evaluations.run_evaluations import run_evaluation
 from benchmarks.run_benchmark import run_benchmark
 
 
-def run_full_suite(cache, llm, config, mode="full"):
+def run_full_suite(
+    cache,
+    llm,
+    config,
+    mode
+):
     """
     mode:
-        - benchmark → NO LLM
-        - eval → LLM + RAGAS evaluation only
-        - full → both benchmark + evaluation
+        - benchmark → benchmark only
+        - eval → evaluation only
     """
+
+    if mode not in ["benchmark", "eval"]:
+
+        raise ValueError(
+            "Invalid mode. Use 'benchmark' or 'eval'."
+        )
 
     test_cases = load_test_cases()
 
     pipeline_results = []
+
     eval_results = []
 
     for test in test_cases:
@@ -26,58 +37,103 @@ def run_full_suite(cache, llm, config, mode="full"):
             llm
         )
 
-        output = run_result.get("output", "")
+        output = run_result.get(
+            "output",
+            ""
+        )
+
         processed_chunks = (
-            run_result.get("processed_chunks", {}) or {}
+            run_result.get(
+                "processed_chunks",
+                {}
+            ) or {}
         )
 
-        latency = run_result.get("latency", 0.0)
-
-        mode_used = (
-            run_result
-            .get("metadata", {})
-            .get("mode")
+        latency = run_result.get(
+            "latency",
+            0.0
         )
 
-        base = {
+        metadata = run_result.get(
+            "metadata",
+            {}
+        )
+
+        mode_used = metadata.get(
+            "mode"
+        )
+
+        pipeline_results.append({
+
             "test_id": test.get("id"),
+
             "task": test.get("task"),
+
             "output": output,
+
             "processed_chunks": processed_chunks,
+
             "latency": latency,
-            "mode": mode_used
-        }
 
-        pipeline_results.append(base)
+            "mode": mode_used,
 
-    if mode in ["eval", "full"]:
+            "metadata": metadata
+        })
+
+    if mode == "eval":
 
         for item in pipeline_results:
 
             eval_result = run_evaluation(
+
                 query=item["task"],
+
                 output=item["output"],
-                processed_chunks=item["processed_chunks"],
+
+                processed_chunks=item[
+                    "processed_chunks"
+                ],
+
                 mode=item["mode"],
+
                 latency=item["latency"],
+
                 config=config
             )
 
             eval_results.append({
+
                 "test_id": item["test_id"],
+
                 "task": item["task"],
+
+                "mode": item["mode"],
+
                 **eval_result
             })
 
-    benchmark_results = None
+        return {
 
-    if mode in ["benchmark", "full"]:
-        benchmark_results = run_benchmark(
-            pipeline_results
-        )
+            "mode": mode,
+
+            "total_test_cases": len(
+                test_cases
+            ),
+
+            "evaluations": eval_results
+        }
+    
+    benchmark_results = run_benchmark(
+        pipeline_results
+    )
 
     return {
+
         "mode": mode,
-        "benchmark": benchmark_results,
-        "evaluations": eval_results
+
+        "total_test_cases": len(
+            test_cases
+        ),
+
+        "benchmark": benchmark_results
     }
