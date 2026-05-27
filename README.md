@@ -13,6 +13,33 @@ The system extracts and processes video transcripts into structured representati
 ## Architecture Diagram
 <img width="600" height="600" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/5da46ac7-379a-443c-8c9b-5a04c22fc60a" />
 
+## Installation
+
+### 1. Clone repository
+
+```bash
+git clone <repo-url>
+cd project
+```
+
+### 2. Create virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run server
+
+```bash
+python -m uvicorn api.app:app --reload
+```
 ## Architecture Decisions
 This system is a deterministic pipeline for YouTube video understanding, optimized for low latency, cost efficiency, and scalable retrieval-based reasoning.
 
