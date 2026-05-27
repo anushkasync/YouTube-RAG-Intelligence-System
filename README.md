@@ -60,7 +60,7 @@ Different video lengths introduce varying challenges in retrieval and token effi
 
 ### Single-Pass LLM Generation
 All processed chunks are merged and passed through a single LLM call per module.
-This design replaces multi-stage summarization pipelines with a single inference step, significantly reducing latency and cost while preserving contextual completeness.
+This design replaces multi-stage summarization pipelines with a single inference step, reducing latency and API usage while preserving context.
 
 ### Mode-Specific Prompting
 Prompts are dynamically selected based on video length:
