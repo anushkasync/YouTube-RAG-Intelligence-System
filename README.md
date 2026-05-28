@@ -1,6 +1,6 @@
 # YouTube Intelligence System
 
-A Deterministic Agentic RAG system for processing YouTube videos and performing downstream AI tasks such as summarization, key-point extraction, question generation, and contextual question answering.
+A Deterministic Agentic system for processing YouTube videos and performing downstream AI tasks such as summarization, key-point extraction, question generation and RAG based question answering.
 
 The system extracts and processes video transcripts into structured representations while using shared caching and modular pipelines to reduce redundant LLM calls, optimize cost, and improve scalability.
 
