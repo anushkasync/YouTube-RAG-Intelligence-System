@@ -141,7 +141,7 @@ class GROQLLM:
                 )
 
                 raise Exception(
-                    f"OpenRouter Error: {data}"
+                    f"Groq Error: {data}"
                 )
 
             except Exception as e:

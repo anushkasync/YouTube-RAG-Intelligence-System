@@ -33,49 +33,62 @@ def decide_mode(chunks):
 
 # RAG QA (retrieval based)
 
-def answer_with_rag(query, vectorstore, llm, metadata=None, k=3):
+def answer_with_rag(query, vectorstore, llm, metadata=None, k=1):
 
-    results = vectorstore.similarity_search(query, k=k)
+    results = vectorstore.similarity_search_with_score(query, k=k)
 
     if not results:
         if metadata:
-            metadata["retrieval_used"] = True
-            metadata["fallback_triggered"] = True
-            metadata["failure_reason"] = "NO_RETRIEVED_CHUNKS"
-            metadata["retrieval"]["score"] = 0.0
-            metadata["retrieval"]["chunks"] = []
-            metadata["retrieval"]["top_k"] = 0
-
+            metadata.update({
+                "retrieval_used": True,
+                "fallback_triggered": True,
+                "failure_reason": "NO_RETRIEVED_CHUNKS",
+                "retrieval": {"score": 0.0, "chunks": [], "top_k": 0}
+            })
         return FALLBACK_RESPONSE
 
-    query_emb = embedding_model.embed_query(query)
+    chunks = [doc.page_content for doc, score in results]
+    scores = [score for doc, score in results]
 
-    chunk_embs = embedding_model.embed_documents(
-        [r.page_content for r in results]
-    )
+    avg_score = sum(scores) / len(scores)
 
-    valid, fallback, score = validate_context(query_emb, chunk_embs)
+    threshold = 0.3  # tune this
 
     if metadata:
-        metadata["retrieval_used"] = True
-        metadata["retrieval"]["score"] = score
-        metadata["retrieval"]["chunks"] = [r.page_content for r in results]
-        metadata["retrieval"]["top_k"] = len(results)
+        metadata.update({
+            "retrieval_used": True,
+            "retrieval": {
+                "score": float(avg_score),
+                "chunks": chunks,
+                "top_k": len(chunks)
+            }
+        })
 
-    if fallback:
+    if avg_score < threshold:
         if metadata:
             metadata["fallback_triggered"] = True
             metadata["failure_reason"] = "LOW_CONTEXT_RELEVANCE"
-
         return FALLBACK_RESPONSE
-    
-    context = "\n\n".join([r.page_content for r in results])
 
-    prompt = f"""Context:
+    context = "\n\n".join(chunks)
+
+    prompt = f"""
+You are a precise QA assistant.
+
+Answer using ONLY the context below.
+
+If answer is missing, respond:
+"Not found in the video."
+
+- Keep the answer short and direct.
+- Do NOT add explanations unless asked.
+- Prefer 2–5 sentences maximum.
+
+Context:
 {context}
 
-Question:
-{query}
+Q: {query}
+A:
 """
 
     return llm.invoke(prompt).content.strip()
@@ -144,7 +157,7 @@ def run_agent(
             mode
         )
 
-    elif task == "rag":
+    elif task == "rag_qa":
 
         logger.info("Running RAG module")
 

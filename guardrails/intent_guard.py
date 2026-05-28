@@ -1,4 +1,4 @@
-VALID_TASKS = {"summary", "keypoints", "qa_gen", "rag"}
+VALID_TASKS = {"summary", "keypoints", "qa_gen", "rag_qa"}
 
 def validate_intent_labels(labels):
 
