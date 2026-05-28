@@ -16,10 +16,17 @@ WHISPER_ENABLED = True
 WHISPER_MODEL = "base"  
 WHISPER_LANGUAGE = "en"  
 
-ENV = os.getenv("APP_ENV", "prod").lower()  
-CACHE_DIR = "logs/cache"
-SYSTEM_LOG_FILE = "logs/systems.log"
-BENCHMARK_RESULTS_FILE = "logs/benchmark_results.json"
+ENV = os.getenv("ENV", "prod").lower()
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+CACHE_DIR = os.path.join(LOG_DIR, "cache")
+SYSTEM_LOG_FILE = os.path.join(LOG_DIR,"systems.log")
+BENCHMARK_RESULTS_FILE = os.path.join(
+    LOG_DIR,
+    "benchmark_results.json"
+)
 
 CONFIG = {
     "CHUNK_SIZE": CHUNK_SIZE,

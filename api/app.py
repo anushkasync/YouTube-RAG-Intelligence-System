@@ -93,8 +93,6 @@ def root():
 )
 def health():
 
-    require_dev()
-
     return {
         "status": "healthy",
         "cache": "initialized" if cache else "not_initialized",
@@ -155,7 +153,7 @@ def query_video(request: QueryRequest):
             status_code=500,
             detail={
                 "success": False,
-                "error": str(e),
+                "error": "Internal server error",
                 "trace_id": trace_id
             }
         )

@@ -169,16 +169,37 @@ def run_pipeline(
     vs_cache_hit = vectorstore is not None
 
     if vectorstore is None:
-
         logger.info("Creating vectorstore")
 
+        logger.warning(
+        "Rebuilding vectorstore embeddings"
+    )
+
         vectorstore = create_vectorstore(
-            chunks,
-            video_id,
-            embedding_model
+        chunks,
+        video_id,
+        embedding_model
+    )
+
+    if vectorstore is None:
+
+        logger.error(
+            "Vectorstore creation failed"
         )
 
-        cache.save_vectorstore(vs_key, vectorstore)
+        return {
+            "output": "Unable to build retrieval system.",
+            "metadata": metadata
+        }
+
+    cache.save_vectorstore(
+        vs_key,
+        vectorstore
+    )
+
+    logger.info(
+        "Vectorstore cached successfully"
+    )
 
     mode = decide_mode(chunks)
 

@@ -16,17 +16,15 @@ def stable_hash(value):
 
     return hashlib.sha256(str(value).encode()).hexdigest()
 
-
-# =========================================================
-# CACHE MANAGER
-# =========================================================
-
 class CacheManager:
 
     def __init__(self, base_dir="cache"):
 
         self.base_dir = base_dir
 
+        logger.info(
+    f"Initializing cache manager at {base_dir}"
+)
         ensure_dir(base_dir)
 
         self.transcript_path = os.path.join(base_dir, "transcripts.json")
@@ -143,24 +141,41 @@ class CacheManager:
             ensure_dir(path)
             vectorstore.save_local(path)
 
-        except Exception:
-            logger.error("Caching failed: vectorstore save failed")
-
+        except Exception as e:
+            logger.error(
+        f"Vectorstore save failed: {str(e)}"
+    )
     def load_vectorstore(self, key, embedding_model):
         path = self.vectorstore_path(key)
 
+        logger.info(
+    f"Checking vectorstore path: {path}"
+)
         if not os.path.exists(path):
+            logger.warning(
+        f"Vectorstore cache miss: {path}"
+    )
+
             return None
 
         try:
-            return FAISS.load_local(
-                path,
-                embedding_model,
-                allow_dangerous_deserialization=True
-            )
+            vectorstore = FAISS.load_local(
+        path,
+        embedding_model,
+        allow_dangerous_deserialization=True
+    )
 
-        except Exception:
-            logger.error("Caching failed: vectorstore load failed")
+            logger.info(
+        f"Vectorstore loaded successfully: {path}"
+    )
+
+            return vectorstore
+
+        except Exception as e:
+            logger.error(
+        f"Vectorstore load failed: {str(e)}"
+    )
+
             return None
 
     # LLM OUTPUTS

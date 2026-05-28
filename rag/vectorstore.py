@@ -13,7 +13,9 @@ def create_vectorstore(chunks, video_id, embedding_model):
         if not docs:
             logger.error("Vectorstore creation failed: empty documents")
             return None
-
+        logger.info(
+    f"Building vectorstore with {len(docs)} documents"
+)
         vectorstore = FAISS.from_documents(docs, embedding_model)
         return vectorstore
 
