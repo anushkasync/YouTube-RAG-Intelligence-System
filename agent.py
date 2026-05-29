@@ -20,9 +20,6 @@ def classify_intent(query, llm, metadata=None):
 
     return response
 
-
-# MODE SELECTOR
-
 def decide_mode(chunks):
     if len(chunks) <= 5:
         return "small"
@@ -30,10 +27,7 @@ def decide_mode(chunks):
         return "medium"
     return "long"
 
-
-# RAG QA (retrieval based)
-
-def answer_with_rag(query, vectorstore, llm, metadata=None, k=1):
+def answer_with_rag(query, vectorstore, llm, metadata=None, k=2):
 
     results = vectorstore.similarity_search_with_score(query, k=k)
 
@@ -52,7 +46,7 @@ def answer_with_rag(query, vectorstore, llm, metadata=None, k=1):
 
     avg_score = sum(scores) / len(scores)
 
-    threshold = 0.3  # tune this
+    threshold = 0.2
 
     if metadata:
         metadata.update({
