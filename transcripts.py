@@ -1,9 +1,18 @@
-from youtube_transcript_api import YouTubeTranscriptApi
-from urllib.parse import urlparse, parse_qs
-import subprocess
 import os
-import tempfile
-from config.config import CONFIG
+
+import requests
+from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qs
+from youtube_transcript_api import YouTubeTranscriptApi
+
+from logger import get_logger
+
+load_dotenv()
+
+logger = get_logger("TRANSCRIPTS")
+
+SUPADATA_TRANSCRIPT_URL = "https://api.supadata.ai/v1/youtube/transcript"
+
 
 def extract_video_id(youtube_url: str) -> str:
     parsed_url = urlparse(youtube_url)
@@ -11,7 +20,7 @@ def extract_video_id(youtube_url: str) -> str:
     if parsed_url.hostname == "youtu.be":
         return parsed_url.path[1:]
 
-    if parsed_url.hostname in ["www.youtube.com", "youtube.com"]:
+    if parsed_url.hostname in ("www.youtube.com", "youtube.com"):
         if parsed_url.path == "/watch":
             return parse_qs(parsed_url.query)["v"][0]
 
@@ -20,101 +29,104 @@ def extract_video_id(youtube_url: str) -> str:
 
     raise ValueError("Invalid YouTube URL")
 
+
 def normalize_transcript(transcript):
     if hasattr(transcript, "snippets"):
-        return " ".join([s.text for s in transcript.snippets])
-
-    if isinstance(transcript, list):
-        return " ".join([
-            getattr(t, "text", t.get("text", "")) for t in transcript
-        ])
-
-    if isinstance(transcript, dict):
-        return transcript.get("text", "")
+        return " ".join(snippet.text for snippet in transcript.snippets)
 
     if isinstance(transcript, str):
-        return transcript
+        return transcript.strip()
+
+    if isinstance(transcript, dict):
+        if "content" in transcript:
+            return normalize_transcript(transcript["content"])
+        return transcript.get("text", "").strip()
+
+    if isinstance(transcript, list):
+        parts = []
+        for item in transcript:
+            if isinstance(item, dict):
+                parts.append(item.get("text", ""))
+            else:
+                parts.append(getattr(item, "text", ""))
+        return " ".join(parts).strip()
 
     raise ValueError(f"Unsupported transcript format: {type(transcript)}")
 
-def fetch_from_api(video_id, language="en"):
+
+def _parse_supadata_payload(data):
+    for key in ("content", "transcript", "text"):
+        if key in data and data[key]:
+            return normalize_transcript(data[key])
+
+    raise RuntimeError("Supadata returned empty transcript")
+
+
+def fetch_from_supadata(video_id: str, language="en"):
+    api_key = os.getenv("SUPADATA_API_KEY")
+
+    if not api_key:
+        raise RuntimeError("SUPADATA_API_KEY not set")
+
+    response = requests.get(
+        SUPADATA_TRANSCRIPT_URL,
+        params={
+            "videoId": video_id,
+            "lang": language,
+            "text": "true",
+        },
+        headers={"x-api-key": api_key},
+        timeout=30,
+    )
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Supadata failed ({response.status_code}): {response.text}"
+        )
+
+    text = _parse_supadata_payload(response.json())
+
+    if not text:
+        raise RuntimeError("Supadata returned empty transcript")
+
+    return text
+
+
+def fetch_from_youtube_api(video_id, language="en"):
     yt_api = YouTubeTranscriptApi()
     raw = yt_api.fetch(video_id, languages=[language])
-    return normalize_transcript(raw)
+    text = normalize_transcript(raw)
 
+    if not text:
+        raise RuntimeError("YouTubeTranscriptApi returned empty transcript")
 
-def fetch_with_whisper(youtube_url, language="en"):
-    """
-    Requires:
-    - yt-dlp installed
-    - whisper installed (open-source)
-    """
-    if not CONFIG.get("WHISPER_ENABLED", False):
-        raise RuntimeError("Whisper fallback is disabled")
+    return text
 
-    model = CONFIG.get("WHISPER_MODEL", "base")
-    whisper_lang = CONFIG.get("WHISPER_LANGUAGE", language)
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        audio_file = os.path.join(temp_dir, "audio.mp3")
-        txt_file = os.path.join(temp_dir, "audio.txt")
-
-        try:
-            subprocess.run([
-                "yt-dlp",
-                "-x",
-                "--audio-format", "mp3",
-                "-o", audio_file,
-                youtube_url
-            ], check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"yt-dlp download failed: {e.stderr}")
-
-        try:
-            result = subprocess.run([
-                "whisper",
-                audio_file,
-                "--model", model,
-                "--language", whisper_lang,
-                "--output_format", "txt",
-                "--output_dir", temp_dir
-            ], check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Whisper transcription failed: {e.stderr}")
-
-        if os.path.exists(txt_file):
-            with open(txt_file, "r", encoding="utf-8") as f:
-                return f.read().strip()
-
-        raise RuntimeError("Whisper did not produce output file")
 
 def get_transcript(youtube_url: str, language="en"):
     video_id = extract_video_id(youtube_url)
 
     try:
-        text = fetch_from_api(video_id, language)
+        text = fetch_from_supadata(video_id, language)
+        return {
+            "video_id": video_id,
+            "source": "supadata",
+            "text": text,
+        }
+    except Exception as e:
+        logger.warning(f"Supadata failed: {e}")
 
+    try:
+        text = fetch_from_youtube_api(video_id, language)
         return {
             "video_id": video_id,
             "source": "youtube_transcript_api",
-            "text": text
+            "text": text,
         }
-
     except Exception as e:
-        print(f"[WARN] Primary transcript failed: {e}")
-        print("[INFO] Switching to Whisper fallback...")
+        logger.warning(f"YouTubeTranscriptApi failed: {e}")
 
-        try:
-            text = fetch_with_whisper(youtube_url, language)
-
-            return {
-                "video_id": video_id,
-                "source": "whisper_fallback",
-                "text": text
-            }
-
-        except Exception as e2:
-            return {
-                "video_id": video_id,
-                "error": f"Both methods failed: {str(e2)}"
-            }
+    return {
+        "video_id": video_id,
+        "error": "All transcript sources failed",
+    }
